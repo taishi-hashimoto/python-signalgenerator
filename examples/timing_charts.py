@@ -1,3 +1,4 @@
+import matplotlib.pyplot as plt
 from signalgenerator import *
 
 # Data acquisition parameters.
@@ -47,5 +48,6 @@ samples = sg.sample(size, sampling_frequency)
 
 print(samples)
 
-# Plot it.
-sg.quicklook(samples=samples, name="example.png", show=True)
+samples.plot.line(x="time", row="channel", figsize=(16, 6))
+
+plt.show()
