@@ -150,10 +150,14 @@ class SincPulse(Waveform):
         return self._x
 
     def _model(self, x):
-        return np.sinc(x) * (np.cos((2 * (x + self.m) / (self.n + self.m) - 1) * np.pi) + 1)
+        return np.sinc(x) * (
+            np.cos((2 * (x + self.m) / (self.n + self.m) - 1) * np.pi) + 1)
 
     def __call__(self, x):
-        return np.where(np.logical_and(-self.m <= x, x <= self.n), self._model(x), self.lo())
+        return np.where(
+            np.logical_and(-self.m <= x, x <= self.n),
+            self._model(x),
+            self.lo())
 
 
 class Noise(Waveform):
@@ -213,7 +217,14 @@ class DC(Waveform):
 
 
 class Signal:
-    def __init__(self, waveform, amplitude=1., delay=0., width=None, interval=None):
+    def __init__(
+        self,
+        waveform,
+        amplitude=1.,
+        delay=0.,
+        width=None,
+        interval=None
+    ):
         """Bind a waveform in a physical dimension.
 
         The LOW and HIGH levels are normalized to [0., amplitude].
@@ -223,13 +234,17 @@ class Signal:
         waveform:
             The base waveform.
         amplitude:
-            The peak height. Default is 1. If None, no scaling occurs for the amplitude.
+            The peak height. Default is 1. If None, no scaling occurs for the
+            amplitude.
         delay:
-            The time of pulse in an arbitrary dimension, but it must be the same as pulse_width.
+            The time of pulse in an arbitrary dimension, but it must be the
+            same as pulse_width.
         width:
-            The width of the signal in time. If not specified, the x_scale is set to 1.
+            The width of the signal in time. If not specified, the x_scale is
+            set to 1.
         interval:
-            The repetition interval in second. If specified, the waveform is repeated by this.
+            The repetition interval in second. If specified, the waveform is
+            repeated by this.
         """
         self.waveform = waveform
         self.amplitude = amplitude
@@ -240,10 +255,14 @@ class Signal:
             self.x_scale = 1.
         else:
             self.x_scale = self.waveform.width() / self.width
-        if self.waveform.hi() - self.waveform.lo() == 0. or self.amplitude is None:
+        if (
+            self.waveform.hi() - self.waveform.lo() == 0. or
+            self.amplitude is None
+        ):
             self.y_scale = 1.
         else:
-            self.y_scale = self.amplitude / (self.waveform.hi() - self.waveform.lo())
+            self.y_scale = self.amplitude / (
+                self.waveform.hi() - self.waveform.lo())
         self.x_offset = self.waveform.position()
 
     def single(self, t) -> np.ndarray:
@@ -254,14 +273,18 @@ class Signal:
         Parameters
         ----------
         t:
-            Time in an arbitrary dimension (but the same as self.delay). Can be an array.
+            Time in an arbitrary dimension (but the same as self.delay).
+            Can be an array.
 
         Returns
         -------
         ndarray
             An array representing the signal.
         """
-        return (self.waveform((t - self.delay) * self.x_scale + self.x_offset) - self.waveform.lo()) * self.y_scale
+        return (
+            self.waveform((t - self.delay) * self.x_scale + self.x_offset) -
+            self.waveform.lo()
+        ) * self.y_scale
 
     def sample(
         self,
@@ -297,26 +320,32 @@ class Signal:
             undersample = oversample  # Same.
         elif undersample is None or undersample is False:
             undersample = 1
-        l = n * oversample  # Oversampled length.
-        t = np.arange(l) / (fs * oversample)  # Oversampled time series.
+        l_ = n * oversample  # Oversampled length.
+        t = np.arange(l_) / (fs * oversample)  # Oversampled time series.
         if self.ipp is None:
             w = self.single(t)
         else:  # Repeated mode.
             s = float(fs * self.ipp * oversample)
             if not isclose(s - int(s), 0):
-                raise ValueError("fs * ipp * oversample must be an integer, where remaining is {:e}".format(s-int(s)))
+                raise ValueError((
+                        "fs * ipp * oversample must be an integer, "
+                        "where remaining is {:e}"
+                    ).format(s-int(s)))
             s = int(s)  # Oversampled step
             # Zero-padded waveform.
-            w = np.zeros(1 << (2*l-1).bit_length())
-            w[:l] = self.single(t)
+            w = np.zeros(1 << (2*l_-1).bit_length())
+            w[:l_] = self.single(t)
             i = np.zeros_like(w)
             o = np.zeros_like(w)
-            i[:l:s] = 1
+            i[:l_:s] = 1
             o[:oversample] = 1 / oversample
-            # Pulse repetition and oversampling are calculated in frequency domain.
-            w = np.real(np.fft.ifft(np.fft.fft(w) * np.fft.fft(o) * np.fft.fft(i)))
+            # Pulse repetition and oversampling are calculated in frequency
+            # domain.
+            w = np.real(
+                np.fft.ifft(
+                    np.fft.fft(w) * np.fft.fft(o) * np.fft.fft(i)))
         # Undersampling.
-        return w[:l:undersample]
+        return w[:l_:undersample]
 
     def __add__(self, other):
         return Channel(self, other)
