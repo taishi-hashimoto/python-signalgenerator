@@ -1,5 +1,6 @@
 "A sampled waveform generator."
 import numpy as np
+import xarray as xr
 from scipy.optimize import newton, brent
 from math import isclose
 from typing import List, Union
@@ -7,14 +8,14 @@ from typing import List, Union
 
 def nsamples(fs: float, duration: float):
     """Utility function to compute the number of samples.
-    
+
     Parameters
     ----------
     fs: float
         The sampling frequency in Hz.
     duration:float
         The duration in seconds.
-    
+
     Returns
     -------
     int
@@ -25,14 +26,14 @@ def nsamples(fs: float, duration: float):
 
 def timeaxis(fs: float, n: int):
     """Utility function to build time axis for plotting.
-    
+
     Parameters
     ----------
     fs: float
         The sampling frequency in Hz.
     n: int
         The number of samples.
-    
+
     Returns
     -------
     ndarray
@@ -126,7 +127,7 @@ class SincPulse(Waveform):
 
         # Get the pulse width.
         l_w = newton(lambda x: self(x) - y_p / 2, (-1 + x_p) / 2)
-        r_w = newton(lambda x: self(x) - y_p / 2, ( 1 + x_p) / 2)
+        r_w = newton(lambda x: self(x) - y_p / 2, (+1 + x_p) / 2)
         p_w = r_w - l_w
 
         self._x = x_p
@@ -214,7 +215,7 @@ class DC(Waveform):
 class Signal:
     def __init__(self, waveform, amplitude=1., delay=0., width=None, interval=None):
         """Bind a waveform in a physical dimension.
-        
+
         The LOW and HIGH levels are normalized to [0., amplitude].
 
         Parameters
@@ -348,7 +349,10 @@ class Channel:
         return self._signals
 
     def sample(self, n, fs, oversample=1, undersample=True):
-        return np.sum([signal.sample(n, fs, oversample, undersample) for signal in self.signals], axis=0)
+        return np.sum([
+            signal.sample(n, fs, oversample, undersample)
+            for signal in self.signals
+        ], axis=0)
 
     def __add__(self, other):
         return Channel(*self._signals, other)
@@ -382,28 +386,49 @@ class SignalGenerator:
         fs: float,
         oversample: int = 1,
         undersample: Union[bool, int] = True
-    ):
-        """Sample all channels and pack the result in a ndarray.
-        
+    ) -> xr.DataArray:
+        """Sample all channels and pack the result in a `xarray.DataArray`.
+
         Parameters
         ----------
         See `Signal.sample`.
 
         Returns
         -------
-        ndarray
-            A matrix with the size `len(self.channels)` x `n`.
+        xarray.DataArray
             Sampled waveforms.
         """
-        return np.vstack([ch.sample(n, fs, oversample, undersample) for ch in self.channels])
+        data = np.vstack([
+            ch.sample(n, fs, oversample, undersample)
+            for ch in self.channels
+        ])
+        dims = ["channel", "time"]
+        names = []
+        for ic, ch in enumerate(self.channels, 1):
+            if ch.name:
+                names.append(ch.name)
+            else:
+                names.append(f"Ch.{ic}")
+        taxis = timeaxis(fs, n)
+        coords = {
+            "channel": names,
+            "time": taxis,
+        }
+        return xr.DataArray(
+            data, coords=coords, dims=dims,
+            attrs={
+                "fs": fs,
+                "oversample": oversample,
+                "undersample": undersample,
+            })
 
     def __add__(self, other):
         return SignalGenerator(*self._channels, other)
 
     def quicklook(
         self,
-        taxis=None,
         samples=None,
+        taxis=None,
         n: int = None,
         fs: float = None,
         figsize=(12, 5),
@@ -413,15 +438,19 @@ class SignalGenerator:
         "Quicklook plot for each channel."
         import matplotlib.pyplot as plt
 
-        if samples is None:
-            # Generated samples.
-            samples = self.sample(n, fs)
+        if isinstance(samples, xr.DataArray):
+            taxis = samples.coords["time"]
+            samples = samples.data
         else:
-            n = np.shape(samples)[-1]
-    
-        if taxis is None:
-            # Time axis in seconds.
-            taxis = timeaxis(fs, n)
+            if samples is None:
+                # Generated samples.
+                samples = self.sample(n, fs)
+            else:
+                n = np.shape(samples)[-1]
+
+            if taxis is None:
+                # Time axis in seconds.
+                taxis = timeaxis(fs, n)
 
         fig, axes = plt.subplots(3, 1, figsize=figsize, sharex=True)
         for ic, channel in enumerate(self.channels):
@@ -437,7 +466,3 @@ class SignalGenerator:
             plt.show()
 
         return samples
-
-
-
-    
