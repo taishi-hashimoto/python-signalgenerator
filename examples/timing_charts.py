@@ -45,5 +45,7 @@ sg = SignalGenerator(
 
 samples = sg.sample(size, sampling_frequency)
 
+print(samples)
+
 # Plot it.
-sg.quicklook(fs=sampling_frequency, samples=samples, name="example.png", show=True)
+sg.quicklook(samples=samples, name="example.png", show=True)
