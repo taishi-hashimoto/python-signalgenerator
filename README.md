@@ -1,6 +1,6 @@
-# signalgenerator
+# python-signalgenerator
 
-Simple signal generator (emulator).
+Simple signal generator (emulator) in Python.
 
 Currently it is more like a pulse generator...
 
