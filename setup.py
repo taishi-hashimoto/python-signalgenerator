@@ -6,7 +6,7 @@ package_dir = "src"
 
 setup(
     name='signalgenerator',
-    version="v1.1.0",
+    version="v1.1.1",
     description="Simple signal generator (emulator).",
     package_dir={
         "": package_dir
