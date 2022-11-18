@@ -6,6 +6,12 @@ from math import isclose
 from typing import List, Union
 
 
+__all__ = [
+    "nsamples", "timeaxis", "Waveform", "RectangularPulse", "Step",
+    "SincPulse", "Noise", "DC", "Signal", "Channel", "SignalGenerator"
+]
+
+
 def nsamples(fs: float, duration: float):
     """Utility function to compute the number of samples.
 
