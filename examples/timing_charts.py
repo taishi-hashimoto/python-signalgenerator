@@ -1,5 +1,9 @@
 import matplotlib.pyplot as plt
-from signalgenerator import *
+from signalgenerator import (
+    nsamples, timeaxis,
+    SignalGenerator, Channel, Signal,
+    RectangularPulse, Step
+)
 
 # Data acquisition parameters.
 sampling_frequency = 100e3  # [Hz]
